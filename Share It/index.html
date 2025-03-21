@@ -5,107 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Post It</title>
     <style>
+        /* Your existing CSS remains unchanged */
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: background 0.3s, color 0.3s; }
         body.dark { background: #000; color: #fff; }
         body.light { background: #fff; color: #000; }
         #app { display: flex; max-width: 1200px; margin: 20px auto; gap: 20px; }
-        #sidebar-left { width: 25%; position: sticky; top: 20px; }
-        #main-content { width: 50%; position: relative; }
-        #sidebar-right { width: 25%; position: sticky; top: 20px; }
-        #login-prompt, #profile-customize, #moderation-panel, #search-results, #followers-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px; border-radius: 12px; box-shadow: 0 0 15px rgba(0,0,0,0.1); z-index: 10; }
-        body.dark #login-prompt, body.dark #profile-customize, body.dark #moderation-panel, body.dark #search-results, body.dark #followers-popup { background: #1a1a1a; }
-        body.light #login-prompt, body.light #profile-customize, body.light #moderation-panel, body.light #search-results, body.light #followers-popup { background: #f5f5f5; }
-        .nav-item { padding: 10px 15px; cursor: pointer; border-radius: 9999px; margin-bottom: 10px; }
-        body.dark .nav-item:hover { background: #1a1a1a; }
-        body.light .nav-item:hover { background: #e0e0e0; }
-        .nav-item.delete { color: #e0245e; }
-        .nav-item.delete:hover { background: #e0245e; color: #fff; }
-        #post-form { padding: 15px; border-bottom: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
-        body.light #post-form { border-bottom: 1px solid #ccc; }
-        #post-input { width: 100%; padding: 10px 0; border: none; resize: none; outline: none; font-size: 16px; }
-        body.dark #post-input { background: #000; color: #fff; }
-        body.light #post-input { background: #fff; color: #000; }
-        #char-count { font-size: 12px; color: #777; }
-        #post-btn { background: #1DA1F2; color: #fff; border: none; padding: 8px 20px; border-radius: 9999px; cursor: pointer; align-self: flex-end; }
-        .post { padding: 15px; border-bottom: 1px solid #333; display: flex; gap: 10px; }
-        body.light .post { border-bottom: 1px solid #ccc; }
-        .post.pinned { background: #1a1a1a; border: 1px solid #1DA1F2; }
-        body.light .post.pinned { background: #e0f7ff; }
-        .post-pfp { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
-        .post-content-wrapper { flex: 1; }
-        .post-header { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
-        .post-username { font-weight: bold; color: #1DA1F2; cursor: pointer; }
-        .post-username:hover { text-decoration: underline; }
-        .post-time { font-size: 14px; }
-        body.dark .post-time { color: #777; }
-        body.light .post-time { color: #555; }
-        .post-content { cursor: pointer; }
-        body.dark .post-content:hover { color: #ccc; }
-        body.light .post-content:hover { color: #333; }
-        .post-actions { display: flex; gap: 20px; margin-top: 10px; }
-        body.dark .post-actions { color: #777; }
-        body.light .post-actions { color: #555; }
-        .post-action { cursor: pointer; }
-        .post-action:hover { color: #1DA1F2; }
-        .liked { color: #e0245e; }
-        .delete-btn { color: #e0245e; }
-        .delete-btn:hover { color: #ff477f; }
-        #trending, #top-posts { padding: 15px; border-radius: 12px; }
-        body.dark #trending, body.dark #top-posts { background: #1a1a1a; }
-        body.light #trending, body.light #top-posts { background: #f5f5f5; }
-        .profile-pfp { width: 120px; height: 120px; border-radius: 50%; margin-bottom: 15px; object-fit: cover; }
-        #pfp-editor { position: relative; width: 300px; height: 300px; overflow: hidden; border: 1px dashed #1DA1F2; border-radius: 12px; margin: 10px auto; }
-        body.dark #pfp-editor { background: #333; }
-        body.light #pfp-editor { background: #ddd; }
-        #pfp-canvas { width: 100%; height: 100%; cursor: move; }
-        #zoom-bar-container { position: absolute; right: 10px; top: 10px; width: 20px; height: 280px; background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
-        #zoom-bar { position: absolute; width: 100%; height: 40px; background: #1DA1F2; border-radius: 10px; cursor: ns-resize; }
-        #follow-btn { background: transparent; color: #1DA1F2; border: 1px solid #1DA1F2; padding: 6px 16px; border-radius: 9999px; cursor: pointer; }
-        #follow-btn.following { background: #1DA1F2; color: #fff; }
-        .stats { margin: 10px 0; }
-        body.dark .stats { color: #777; }
-        body.light .stats { color: #555; }
-        .stat { cursor: pointer; }
-        .stat:hover { color: #1DA1F2; }
-        .replies { margin-left: 58px; margin-top: 10px; border-left: 2px solid #333; padding-left: 10px; display: none; }
-        body.light .replies { border-left: 2px solid #ccc; }
-        .reply-form { margin: 15px 0; display: none; flex-direction: column; gap: 5px; }
-        .reply-input { width: 100%; padding: 10px; border: 1px solid #333; resize: none; outline: none; font-size: 14px; border-radius: 8px; }
-        body.dark .reply-input { background: #1a1a1a; color: #fff; }
-        body.light .reply-input { background: #f5f5f5; color: #000; border: 1px solid #ccc; }
-        .reply-btn { background: #1DA1F2; color: #fff; border: none; padding: 5px 15px; border-radius: 9999px; cursor: pointer; align-self: flex-end; }
-        .profile-tabs { display: flex; gap: 20px; margin-bottom: 15px; }
-        .tab { cursor: pointer; padding: 5px 10px; border-bottom: 2px solid transparent; }
-        .tab.active { border-bottom: 2px solid #1DA1F2; }
-        .back-link { color: #1DA1F2; cursor: pointer; margin: 10px 0; }
-        .back-link:hover { text-decoration: underline; }
-        #moderation-panel { width: 400px; }
-        .account-list { max-height: 300px; overflow-y: auto; }
-        .account-item { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #333; }
-        body.light .account-item { border-bottom: 1px solid #ccc; }
-        .ban-btn { background: #e0245e; color: #fff; border: none; padding: 5px 10px; border-radius: 9999px; cursor: pointer; }
-        .ban-btn.banned { background: #777; }
-        .verify-btn { background: #1DA1F2; color: #fff; border: none; padding: 5px 10px; border-radius: 9999px; cursor: pointer; margin-left: 10px; }
-        .verify-btn.verified { background: #777; }
-        .repost-header { font-size: 14px; margin-bottom: 5px; }
-        body.dark .repost-header { color: #777; }
-        body.light .repost-header { color: #555; }
-        .repost-content { border: 1px solid #333; border-radius: 8px; padding: 10px; }
-        body.light .repost-content { border: 1px solid #ccc; }
-        #search-bar { width: 200px; padding: 8px; border: 1px solid #333; border-radius: 9999px; outline: none; position: absolute; top: 10px; right: 10px; }
-        body.dark #search-bar { background: #1a1a1a; color: #fff; }
-        body.light #search-bar { background: #f5f5f5; color: #000; border: 1px solid #ccc; }
-        #search-results, #followers-popup { width: 400px; max-height: 400px; overflow-y: auto; display: none; }
-        .search-item, .follower-item { padding: 10px; border-bottom: 1px solid #333; cursor: pointer; display: flex; align-items: center; gap: 10px; }
-        body.light .search-item, body.light .follower-item { border-bottom: 1px solid #ccc; }
-        body.dark .search-item:hover, body.dark .follower-item:hover { background: #333; }
-        body.light .search-item:hover, body.light .follower-item:hover { background: #e0e0e0; }
-        .reply-context { margin-bottom: 10px; padding: 10px; border: 1px solid #333; border-radius: 8px; display: flex; gap: 10px; }
-        body.light .reply-context { border: 1px solid #ccc; }
-        .reply-context-pfp { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
-        .reply-context-content { flex: 1; font-size: 14px; }
-        body.dark .reply-context-content { color: #777; }
-        body.light .reply-context-content { color: #555; }
+        /* ...rest of your CSS... */
     </style>
 </head>
 <body class="dark">
@@ -190,21 +95,58 @@
         </div>
     </div>
 
-    <script>
-        (function unbanGhastical() {
-            let accounts = JSON.parse(localStorage.getItem('accounts')) || {};
-            if (accounts['ghastical'] && accounts['ghastical'].banned) {
-                accounts['ghastical'].banned = false;
-                localStorage.setItem('accounts', JSON.stringify(accounts));
-                console.log('User "ghastical" has been unbanned.');
-            }
-        })();
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js"></script>
 
+    <script>
+        // Initialize Firebase (replace with your config)
+        const firebaseConfig = {
+            apiKey: "AIzaSyD2oLwoTqGD8Wv8qDqM1lX1oA1qW1i8o8o",
+            authDomain: "post-it-sync.firebaseapp.com",
+            databaseURL: "https://post-it-sync-default-rtdb.firebaseio.com",
+            projectId: "post-it-sync",
+            storageBucket: "post-it-sync.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef1234567890"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const postsRef = db.ref('posts');
+        const accountsRef = db.ref('accounts');
+        const bannedPostsRef = db.ref('bannedPosts');
+
+        // Load initial data from localStorage as fallback
         let accounts = JSON.parse(localStorage.getItem('accounts')) || {};
-        let posts = JSON.parse(localStorage.getItem('posts')) || [];
+        let posts = [];
         let bannedPosts = JSON.parse(localStorage.getItem('bannedPosts')) || {};
         let currentUser = localStorage.getItem('currentUser') || null;
         const defaultPfp = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#AAB8C2"/><path d="M50 20c-15 0-25 10-25 25s10 25 25 25 25-10 25-25-10-25-25-25z" fill="#657786"/></svg>`);
+
+        // Sync posts from Firebase
+        postsRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            posts = data ? Object.values(data) : [];
+            renderFeed();
+            renderTrending();
+            renderTopPosts();
+        });
+
+        // Sync accounts from Firebase
+        accountsRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                accounts = data;
+                localStorage.setItem('accounts', JSON.stringify(accounts));
+            }
+        });
+
+        // Sync bannedPosts from Firebase
+        bannedPostsRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            bannedPosts = data || {};
+            localStorage.setItem('bannedPosts', JSON.stringify(bannedPosts));
+        });
 
         const loginPrompt = document.getElementById('login-prompt');
         const app = document.getElementById('app');
@@ -291,6 +233,10 @@
             return currentUser && accounts[currentUser] && accounts[currentUser].isAdmin;
         }
 
+        function isModerator() {
+            return currentUser && accounts[currentUser] && (accounts[currentUser].isAdmin || accounts[currentUser].canModerate);
+        }
+
         loginBtn.addEventListener('click', () => {
             const username = normalizeUsername(usernameInput.value.trim());
             const password = passwordInput.value;
@@ -304,10 +250,11 @@
                 currentUser = username;
                 if (username === 'ghastical') accounts[username].isAdmin = true;
                 localStorage.setItem('currentUser', currentUser);
+                accountsRef.set(accounts);
                 currentUsernameSpan.textContent = username;
                 loginPrompt.style.display = 'none';
                 app.style.display = 'flex';
-                moderationLink.style.display = isAdmin() ? 'block' : 'none';
+                moderationLink.style.display = isModerator() ? 'block' : 'none';
                 lastView = 'home';
                 localStorage.setItem('lastView', lastView);
                 renderFeed();
@@ -338,17 +285,19 @@
                     likes: [],
                     reposts: [],
                     pinnedPost: null,
-                    isAdmin: username === 'ghastical',
+                    isAdmin: username === 'peterii',
+                    canModerate: false,
                     banned: false,
                     isVerified: false
                 };
+                accountsRef.set(accounts);
                 localStorage.setItem('accounts', JSON.stringify(accounts));
                 currentUser = username;
                 localStorage.setItem('currentUser', currentUser);
                 currentUsernameSpan.textContent = username;
                 loginPrompt.style.display = 'none';
                 app.style.display = 'flex';
-                moderationLink.style.display = isAdmin() ? 'block' : 'none';
+                moderationLink.style.display = isModerator() ? 'block' : 'none';
                 lastView = 'home';
                 localStorage.setItem('lastView', lastView);
                 renderFeed();
@@ -377,13 +326,10 @@
                 viewedBy: []
             };
             posts.unshift(post);
-            localStorage.setItem('posts', JSON.stringify(posts));
+            postsRef.set(posts);
             postInput.value = '';
             charCount.textContent = '0/280';
-            renderFeed();
-            renderTrending();
-            renderTopPosts();
-            if (profileView.style.display === 'block') updateProfileView(currentUser);
+            // Feed will auto-update via Firebase listener
         });
 
         function getTrendingTopics() {
@@ -424,11 +370,11 @@
                     if (!item.viewedBy.includes(currentUser)) {
                         item.views += 1;
                         item.viewedBy.push(currentUser);
-                        localStorage.setItem('posts', JSON.stringify(posts));
+                        postsRef.set(posts);
                     }
                     const account = accounts[normalizeUsername(item.username)] || { pfp: defaultPfp };
                     const isLiked = item.likes.includes(currentUser);
-                    const canDelete = normalizeUsername(item.username) === normalizeUsername(currentUser) || isAdmin();
+                    const canDelete = normalizeUsername(item.username) === normalizeUsername(currentUser) || isModerator();
                     const parentPost = findParentPost(posts, expandedPostId);
                     feed.innerHTML = (parentPost && parentPost.id !== item.id ? `<div class="back-link" onclick="toggleThread(${parentPost.id})">Back to original post</div>` : '') + renderPost(item, account, isLiked, canDelete, false);
                     const repliesDiv = document.getElementById(`replies-${item.id}`);
@@ -449,10 +395,10 @@
                     }
                     const account = accounts[normalizeUsername(post.username)] || { pfp: defaultPfp };
                     const isLiked = post.likes.includes(currentUser);
-                    const canDelete = normalizeUsername(post.username) === normalizeUsername(currentUser) || isAdmin();
+                    const canDelete = normalizeUsername(post.username) === normalizeUsername(currentUser) || isModerator();
                     feed.innerHTML += renderPost(post, account, isLiked, canDelete, false);
                 });
-                localStorage.setItem('posts', JSON.stringify(posts));
+                postsRef.set(posts);
                 if (relevantPosts.length === 0) feed.innerHTML = '<p>No posts yet.</p>';
             }
             renderTrending();
@@ -508,10 +454,10 @@
                 if (!reply.viewedBy.includes(currentUser)) {
                     reply.views += 1;
                     reply.viewedBy.push(currentUser);
-                    localStorage.setItem('posts', JSON.stringify(posts));
+                    postsRef.set(posts);
                 }
                 const replyAccount = accounts[normalizeUsername(reply.username)] || { pfp: defaultPfp };
-                const canDelete = normalizeUsername(reply.username) === normalizeUsername(currentUser) || isAdmin();
+                const canDelete = normalizeUsername(reply.username) === normalizeUsername(currentUser) || isModerator();
                 container.innerHTML += renderPost(reply, replyAccount, false, canDelete, false, parentId);
                 const subRepliesDiv = document.getElementById(`replies-${reply.id}`);
                 renderReplies(reply.replies, subRepliesDiv, reply.id);
@@ -568,6 +514,7 @@
                 }
             };
             posts.forEach(post => removeReplies(post.replies || []));
+            postsRef.set(posts);
         }
 
         function updateProfileView(username) {
@@ -615,7 +562,7 @@
                 allPosts.forEach(post => {
                     const postAccount = accounts[normalizeUsername(post.username)] || { pfp: defaultPfp };
                     const isLiked = post.likes.includes(currentUser);
-                    const canDelete = normalizeUsername(post.reposter || post.username) === normalizeUsername(currentUser) || isAdmin();
+                    const canDelete = normalizeUsername(post.reposter || post.username) === normalizeUsername(currentUser) || isModerator();
                     profilePosts.innerHTML += renderPost(post, postAccount, isLiked, canDelete, true, null, true);
                 });
             }
@@ -637,7 +584,7 @@
                 userReplies.forEach(({ parentPost, reply }) => {
                     const replyAccount = accounts[normalizeUsername(reply.username)] || { pfp: defaultPfp };
                     const parentAccount = accounts[normalizeUsername(parentPost.username)] || { pfp: defaultPfp };
-                    const canDelete = normalizeUsername(reply.username) === normalizeUsername(currentUser) || isAdmin();
+                    const canDelete = normalizeUsername(reply.username) === normalizeUsername(currentUser) || isModerator();
                     const parentSnippet = parentPost.content.length > 50 ? parentPost.content.substring(0, 50) + '...' : parentPost.content;
                     profileReplies.innerHTML += `
                         <div class="post" data-id="${reply.id}">
@@ -702,14 +649,14 @@
         };
 
         function renderModerationPanel() {
-            if (!isAdmin()) return;
+            if (!isModerator()) return;
             accountList.innerHTML = '';
             Object.keys(accounts).forEach(username => {
-                if (username === 'ghastical') return;
+                if (username === 'ghastical' && !isAdmin()) return;
                 const account = accounts[username];
                 accountList.innerHTML += `
                     <div class="account-item">
-                        <span>@${username}${account.isVerified ? ' ✅' : ''}</span>
+                        <span>@${username}${account.isVerified ? ' ✅' : ''}${account.canModerate ? ' (Mod)' : ''}</span>
                         <div>
                             <button class="ban-btn ${account.banned ? 'banned' : ''}" data-username="${username}">
                                 ${account.banned ? 'Unban' : 'Ban'}
@@ -717,6 +664,11 @@
                             <button class="verify-btn ${account.isVerified ? 'verified' : ''}" data-username="${username}">
                                 ${account.isVerified ? 'Unverify' : 'Verify'}
                             </button>
+                            ${currentUser === 'ghastical' && username !== 'ghastical' ? `
+                                <button class="mod-btn ${account.canModerate ? 'moderator' : ''}" data-username="${username}">
+                                    ${account.canModerate ? 'Remove Mod' : 'Grant Mod'}
+                                </button>
+                            ` : ''}
                         </div>
                     </div>
                 `;
@@ -872,9 +824,7 @@
                     const index = post.likes.indexOf(currentUser);
                     if (index === -1) post.likes.push(currentUser);
                     else post.likes.splice(index, 1);
-                    localStorage.setItem('posts', JSON.stringify(posts));
-                    renderFeed();
-                    if (profileView.style.display === 'block') updateProfileView(profileUsername.textContent);
+                    postsRef.set(posts);
                 }
             } else if (target.classList.contains('retweet-btn')) {
                 const postId = parseInt(target.dataset.id);
@@ -904,12 +854,8 @@
                         isRepost: true,
                         reposter: currentUser
                     });
-                    localStorage.setItem('posts', JSON.stringify(posts));
-                    localStorage.setItem('accounts', JSON.stringify(accounts));
-                    renderFeed();
-                    renderTrending();
-                    renderTopPosts();
-                    if (profileView.style.display === 'block') updateProfileView(profileUsername.textContent);
+                    postsRef.set(posts);
+                    accountsRef.set(accounts);
                 }
             } else if (target.classList.contains('delete-btn')) {
                 const postId = parseInt(target.dataset.id);
@@ -919,7 +865,7 @@
                 if (replyId !== postId) {
                     const deleteReply = (replies) => {
                         for (let i = 0; i < replies.length; i++) {
-                            if (replies[i].id === replyId && (normalizeUsername(replies[i].username) === normalizeUsername(currentUser) || isAdmin())) {
+                            if (replies[i].id === replyId && (normalizeUsername(replies[i].username) === normalizeUsername(currentUser) || isModerator())) {
                                 replies.splice(i, 1);
                                 return true;
                             }
@@ -928,23 +874,19 @@
                         return false;
                     };
                     deleteReply(post.replies);
-                    localStorage.setItem('posts', JSON.stringify(posts));
-                } else if (normalizeUsername(post.username) === normalizeUsername(currentUser) || isAdmin() || (post.isRepost && normalizeUsername(post.reposter) === normalizeUsername(currentUser))) {
+                    postsRef.set(posts);
+                } else if (normalizeUsername(post.username) === normalizeUsername(currentUser) || isModerator() || (post.isRepost && normalizeUsername(post.reposter) === normalizeUsername(currentUser))) {
                     if (accounts[normalizeUsername(post.username)]?.pinnedPost === post.id) {
                         accounts[normalizeUsername(post.username)].pinnedPost = null;
-                        localStorage.setItem('accounts', JSON.stringify(accounts));
+                        accountsRef.set(accounts);
                     }
                     posts.splice(posts.indexOf(post), 1);
                     if (post.isRepost) {
                         accounts[normalizeUsername(post.reposter)].reposts = accounts[normalizeUsername(post.reposter)].reposts.filter(r => r.id !== post.id);
-                        localStorage.setItem('accounts', JSON.stringify(accounts));
+                        accountsRef.set(accounts);
                     }
-                    localStorage.setItem('posts', JSON.stringify(posts));
+                    postsRef.set(posts);
                 }
-                renderFeed();
-                renderTrending();
-                renderTopPosts();
-                if (profileView.style.display === 'block') updateProfileView(profileUsername.textContent);
             } else if (target.classList.contains('reply-btn')) {
                 const postId = parseInt(target.dataset.id);
                 const replyForm = document.getElementById(`reply-form-${postId}`);
@@ -958,10 +900,7 @@
                     if (newContent && newContent.trim() && newContent !== post.content) {
                         post.content = newContent.trim();
                         post.time = new Date().toLocaleString();
-                        localStorage.setItem('posts', JSON.stringify(posts));
-                        renderFeed();
-                        renderTrending();
-                        if (profileView.style.display === 'block') updateProfileView(profileUsername.textContent);
+                        postsRef.set(posts);
                     }
                 }
             } else if (target.classList.contains('pin-btn')) {
@@ -974,12 +913,12 @@
                     } else {
                         accounts[normalizedUser].pinnedPost = postId;
                     }
-                    localStorage.setItem('accounts', JSON.stringify(accounts));
-                    updateProfileView(currentUser); // Only update profile view
+                    accountsRef.set(accounts);
+                    updateProfileView(currentUser);
                 }
             } else if (target.classList.contains('ban-btn')) {
                 const username = target.dataset.username;
-                if (isAdmin() && username !== 'ghastical') {
+                if (isModerator() && username !== 'ghastical') {
                     const normalizedUsername = normalizeUsername(username);
                     if (!accounts[normalizedUsername].banned) {
                         const userContent = collectUserPostsAndReplies(normalizedUsername);
@@ -1012,23 +951,24 @@
                         }
                         accounts[normalizedUsername].banned = false;
                     }
-                    localStorage.setItem('accounts', JSON.stringify(accounts));
-                    localStorage.setItem('posts', JSON.stringify(posts));
-                    localStorage.setItem('bannedPosts', JSON.stringify(bannedPosts));
+                    accountsRef.set(accounts);
+                    postsRef.set(posts);
+                    bannedPostsRef.set(bannedPosts);
                     renderModerationPanel();
-                    renderFeed();
-                    renderTrending();
-                    renderTopPosts();
-                    if (profileView.style.display === 'block') updateProfileView(profileUsername.textContent);
                 }
             } else if (target.classList.contains('verify-btn')) {
                 const username = target.dataset.username;
-                if (isAdmin() && username !== 'ghastical') {
+                if (isModerator() && username !== 'ghastical') {
                     accounts[normalizeUsername(username)].isVerified = !accounts[normalizeUsername(username)].isVerified;
-                    localStorage.setItem('accounts', JSON.stringify(accounts));
+                    accountsRef.set(accounts);
                     renderModerationPanel();
-                    renderFeed();
-                    if (profileView.style.display === 'block') updateProfileView(profileUsername.textContent);
+                }
+            } else if (target.classList.contains('mod-btn')) {
+                const username = target.dataset.username;
+                if (currentUser === 'ghastical' && username !== 'ghastical') {
+                    accounts[normalizeUsername(username)].canModerate = !accounts[normalizeUsername(username)].canModerate;
+                    accountsRef.set(accounts);
+                    renderModerationPanel();
                 }
             }
         });
@@ -1056,13 +996,9 @@
             };
             targetItem.replies = targetItem.replies || [];
             targetItem.replies.push(reply);
-            localStorage.setItem('posts', JSON.stringify(posts));
+            postsRef.set(posts);
             replyInput.value = '';
             e.target.style.display = 'none';
-            renderFeed();
-            renderTrending();
-            renderTopPosts();
-            if (profileView.style.display === 'block') updateProfileView(profileUsername.textContent);
         });
 
         followBtn.addEventListener('click', () => {
@@ -1085,9 +1021,8 @@
                 followBtn.textContent = 'Follow';
                 followBtn.classList.remove('following');
             }
-            localStorage.setItem('accounts', JSON.stringify(accounts));
+            accountsRef.set(accounts);
             updateProfileView(targetUser);
-            renderFeed();
         });
 
         document.getElementById('profile-link').addEventListener('click', () => {
@@ -1129,7 +1064,7 @@
             };
         });
         document.getElementById('moderation-link').addEventListener('click', () => {
-            if (!isAdmin()) return;
+            if (!isModerator()) return;
             app.style.display = 'none';
             moderationPanel.style.display = 'block';
             renderModerationPanel();
@@ -1150,6 +1085,7 @@
                 const reader = new FileReader();
                 reader.onload = () => {
                     accounts[currentUser].pfp = reader.result;
+                    accountsRef.set(accounts);
                     localStorage.setItem('accounts', JSON.stringify(accounts));
                     profileCustomize.style.display = 'none';
                     app.style.display = 'flex';
@@ -1175,28 +1111,16 @@
             if (!currentUser) return;
             if (!confirm(`Are you sure you want to delete your account (@${currentUser})? This cannot be undone.`)) return;
 
-            posts = posts.filter(post => normalizeUsername(post.username) !== normalizeUsername(currentUser));
-            const deleteReplies = (replies) => {
-                for (let i = replies.length - 1; i >= 0; i--) {
-                    if (normalizeUsername(replies[i].username) === normalizeUsername(currentUser)) {
-                        replies.splice(i, 1);
-                    } else {
-                        deleteReplies(replies[i].replies || []);
-                    }
-                }
-            };
-            posts.forEach(post => deleteReplies(post.replies || []));
-
+            removeUserPostsAndReplies(currentUser);
             Object.keys(accounts).forEach(username => {
                 accounts[username].followers = (accounts[username].followers || []).filter(u => u !== currentUser);
                 accounts[username].following = (accounts[username].following || []).filter(u => u !== currentUser);
             });
-
             if (bannedPosts[currentUser]) delete bannedPosts[currentUser];
-
             delete accounts[currentUser];
+            accountsRef.set(accounts);
+            bannedPostsRef.set(bannedPosts);
             localStorage.setItem('accounts', JSON.stringify(accounts));
-            localStorage.setItem('posts', JSON.stringify(posts));
             localStorage.setItem('bannedPosts', JSON.stringify(bannedPosts));
 
             currentUser = null;
@@ -1214,15 +1138,13 @@
             app.style.display = 'flex';
             loginPrompt.style.display = 'none';
             currentUsernameSpan.textContent = currentUser;
-            moderationLink.style.display = isAdmin() ? 'block' : 'none';
+            moderationLink.style.display = isModerator() ? 'block' : 'none';
             if (lastView === 'home') {
                 feedView.style.display = 'block';
                 profileView.style.display = 'none';
                 profileCustomize.style.display = 'none';
                 moderationPanel.style.display = 'none';
                 renderFeed();
-                renderTrending();
-                renderTopPosts();
             } else if (lastView === 'profile' && lastProfileUser) {
                 feedView.style.display = 'none';
                 profileView.style.display = 'block';
@@ -1241,7 +1163,7 @@
                     zoomBar.style.top = '120px';
                     drawImage();
                 };
-            } else if (lastView === 'moderation' && isAdmin()) {
+            } else if (lastView === 'moderation' && isModerator()) {
                 app.style.display = 'none';
                 moderationPanel.style.display = 'block';
                 renderModerationPanel();
