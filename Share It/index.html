@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post It</title>
+    <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: background 0.3s, color 0.3s; }
+        body.dark { background: #000; color: #fff; }
+        body.light { background: #fff; color: #000; }
+        #app { display: flex; max-width: 1200px; margin: 20px auto; gap: 20px; }
+        #sidebar-left { width: 25%; position: sticky; top: 20px; }
+        #main-content { width: 50%; position: relative; }
+        #sidebar-right { width: 25%; position: sticky; top: 20px; }
+        #login-prompt, #profile-customize, #moderation-panel, #search-results, #followers-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px; border-radius: 12px; box-shadow: 0 0 15px rgba(0,0,0,0.1); z-index: 10; }
+        body.dark #login-prompt, body.dark #profile-customize, body.dark #moderation-panel, body.dark #search-results, body.dark #followers-popup { background: #1a1a1a; }
+        body.light #login-prompt, body.light #profile-customize, body.light #moderation-panel, body.light #search-results, body.light #followers-popup { background: #f5f5f5; }
+        .nav-item { padding: 10px 15px; cursor: pointer; border-radius: 9999px; margin-bottom: 10px; }
+        body.dark .nav-item:hover { background: #1a1a1a; }
+        body.light .nav-item:hover { background: #e0e0e0; }
+        .nav-item.delete { color: #e0245e; }
+        .nav-item.delete:hover { background: #e0245e; color: #fff; }
+        #post-form { padding: 15px; border-bottom: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
+        body.light #post-form { border-bottom: 1px solid #ccc; }
+        #post-input { width: 100%; padding: 10px 0; border: none; resize: none; outline: none; font-size: 16px; }
+        body.dark #post-input { background: #000; color: #fff; }
+        body.light #post-input { background: #fff; color: #000; }
+        #char-count { font-size: 12px; color: #777; }
+        #post-btn { background: #1DA1F2; color: #fff; border: none; padding: 8px 20px; border-radius: 9999px; cursor: pointer; align-self: flex-end; }
+        .post { padding: 15px; border-bottom: 1px solid #333; display: flex; gap: 10px; }
+        body.light .post { border-bottom: 1px solid #ccc; }
+        .post.pinned { background: #1a1a1a; border: 1px solid #1DA1F2; }
+        body.light .post.pinned { background: #e0f7ff; }
+        .post-pfp { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
+        .post-content-wrapper { flex: 1; }
+        .post-header { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
+        .post-username { font-weight: bold; color: #1DA1F2; cursor: pointer; }
+        .post-username:hover { text-decoration: underline; }
+        .post-time { font-size: 14px; }
+        body.dark .post-time { color: #777; }
+        body.light .post-time { color: #555; }
+        .post-content { cursor: pointer; }
+        body.dark .post-content:hover { color: #ccc; }
+        body.light .post-content:hover { color: #333; }
+        .post-actions { display: flex; gap: 20px; margin-top: 10px; }
+        body.dark .post-actions { color: #777; }
+        body.light .post-actions { color: #555; }
+        .post-action { cursor: pointer; }
+        .post-action:hover { color: #1DA1F2; }
+        .liked { color: #e0245e; }
+        .delete-btn { color: #e0245e; }
+        .delete-btn:hover { color: #ff477f; }
+        #trending, #top-posts { padding: 15px; border-radius: 12px; }
+        body.dark #trending, body.dark #top-posts { background: #1a1a1a; }
+        body.light #trending, body.light #top-posts { background: #f5f5f5; }
+        .profile-pfp { width: 120px; height: 120px; border-radius: 50%; margin-bottom: 15px; object-fit: cover; }
+        #pfp-editor { position: relative; width: 300px; height: 300px; overflow: hidden; border: 1px dashed #1DA1F2; border-radius: 12px; margin: 10px auto; }
+        body.dark #pfp-editor { background: #333; }
+        body.light #pfp-editor { background: #ddd; }
+        #pfp-canvas { width: 100%; height: 100%; cursor: move; }
+        #zoom-bar-container { position: absolute; right: 10px; top: 10px; width: 20px; height: 280px; background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
+        #zoom-bar { position: absolute; width: 100%; height: 40px; background: #1DA1F2; border-radius: 10px; cursor: ns-resize; }
+        #follow-btn { background: transparent; color: #1DA1F2; border: 1px solid #1DA1F2; padding: 6px 16px; border-radius: 9999px; cursor: pointer; }
+        #follow-btn.following { background: #1DA1F2; color: #fff; }
+        .stats { margin: 10px 0; }
+        body.dark .stats { color: #777; }
+        body.light .stats { color: #555; }
+        .stat { cursor: pointer; }
+        .stat:hover { color: #1DA1F2; }
+        .replies { margin-left: 58px; margin-top: 10px; border-left: 2px solid #333; padding-left: 10px; display: none; }
+        body.light .replies { border-left: 2px solid #ccc; }
+        .reply-form { margin: 15px 0; display: none; flex-direction: column; gap: 5px; }
+        .reply-input { width: 100%; padding: 10px; border: 1px solid #333; resize: none; outline: none; font-size: 14px; border-radius: 8px; }
+        body.dark .reply-input { background: #1a1a1a; color: #fff; }
+        body.light .reply-input { background: #f5f5f5; color: #000; border: 1px solid #ccc; }
+        .reply-btn { background: #1DA1F2; color: #fff; border: none; padding: 5px 15px; border-radius: 9999px; cursor: pointer; align-self: flex-end; }
+        .profile-tabs { display: flex; gap: 20px; margin-bottom: 15px; }
+        .tab { cursor: pointer; padding: 5px 10px; border-bottom: 2px solid transparent; }
+        .tab.active { border-bottom: 2px solid #1DA1F2; }
+        .back-link { color: #1DA1F2; cursor: pointer; margin: 10px 0; }
+        .back-link:hover { text-decoration: underline; }
+        #moderation-panel { width: 400px; }
+        .account-list { max-height: 300px; overflow-y: auto; }
+        .account-item { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #333; }
+        body.light .account-item { border-bottom: 1px solid #ccc; }
+        .ban-btn { background: #e0245e; color: #fff; border: none; padding: 5px 10px; border-radius: 9999px; cursor: pointer; }
+        .ban-btn.banned { background: #777; }
+        .verify-btn { background: #1DA1F2; color: #fff; border: none; padding: 5px 10px; border-radius: 9999px; cursor: pointer; margin-left: 10px; }
+        .verify-btn.verified { background: #777; }
+        .repost-header { font-size: 14px; margin-bottom: 5px; }
+        body.dark .repost-header { color: #777; }
+        body.light .repost-header { color: #555; }
+        .repost-content { border: 1px solid #333; border-radius: 8px; padding: 10px; }
+        body.light .repost-content { border: 1px solid #ccc; }
+        #search-bar { width: 200px; padding: 8px; border: 1px solid #333; border-radius: 9999px; outline: none; position: absolute; top: 10px; right: 10px; }
+        body.dark #search-bar { background: #1a1a1a; color: #fff; }
+        body.light #search-bar { background: #f5f5f5; color: #000; border: 1px solid #ccc; }
+        #search-results, #followers-popup { width: 400px; max-height: 400px; overflow-y: auto; display: none; }
+        .search-item, .follower-item { padding: 10px; border-bottom: 1px solid #333; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+        body.light .search-item, body.light .follower-item { border-bottom: 1px solid #ccc; }
+        body.dark .search-item:hover, body.dark .follower-item:hover { background: #333; }
+        body.light .search-item:hover, body.light .follower-item:hover { background: #e0e0e0; }
+        .reply-context { margin-bottom: 10px; padding: 10px; border: 1px solid #333; border-radius: 8px; display: flex; gap: 10px; }
+        body.light .reply-context { border: 1px solid #ccc; }
+        .reply-context-pfp { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+        .reply-context-content { flex: 1; font-size: 14px; }
+        body.dark .reply-context-content { color: #777; }
+        body.light .reply-context-content { color: #555; }
+    </style>
+</head>
+<body class="dark">
+    <div id="login-prompt">
+        <p>Username: <input type="text" id="username-input" maxlength="15"></p>
+        <p>Password: <input type="password" id="password-input"></p>
+        <button id="login-btn">Log In</button>
+        <button id="register-btn">Register</button>
+        <p id="login-error" style="color: #e0245e; display: none;"></p>
+    </div>
+    <div id="profile-customize" style="display: none;">
+        <h3>Customize Profile</h3>
+        <p>Profile Picture:</p>
+        <input type="file" id="pfp-upload" accept="image/*">
+        <div id="pfp-editor">
+            <canvas id="pfp-canvas"></canvas>
+            <div id="zoom-bar-container">
+                <div id="zoom-bar"></div>
+            </div>
+        </div>
+        <p>Bio: <textarea id="bio-input" rows="3" maxlength="160"></textarea></p>
+        <p><button id="theme-toggle">Toggle Theme</button></p>
+        <button id="save-customize">Save</button>
+    </div>
+    <div id="moderation-panel" style="display: none;">
+        <h3>Moderation Panel</h3>
+        <div class="account-list" id="account-list"></div>
+        <button id="close-moderation" style="margin-top: 10px;">Close</button>
+    </div>
+    <div id="search-results" style="display: none;">
+        <h3>Search Results</h3>
+        <div id="search-content"></div>
+        <button id="close-search" style="margin-top: 10px;">Close</button>
+    </div>
+    <div id="followers-popup" style="display: none;">
+        <h3>Followers</h3>
+        <div id="followers-content"></div>
+        <button id="close-followers" style="margin-top: 10px;">Close</button>
+    </div>
+    <div id="app" style="display: none;">
+        <div id="sidebar-left">
+            <div class="nav-item" id="profile-link">Profile (@<span id="current-username"></span>)</div>
+            <div class="nav-item" id="home-link">Home</div>
+            <div class="nav-item" id="customize-link">Customize Profile</div>
+            <div class="nav-item" id="moderation-link" style="display: none;">Moderation</div>
+            <div class="nav-item" id="logout-link">Logout</div>
+            <div class="nav-item delete" id="delete-account-link">Delete Account</div>
+        </div>
+        <div id="main-content">
+            <input type="text" id="search-bar" placeholder="Search...">
+            <div id="feed-view">
+                <form id="post-form">
+                    <textarea id="post-input" rows="3" maxlength="280" placeholder="What's happening?"></textarea>
+                    <span id="char-count">0/280</span>
+                    <button type="submit" id="post-btn">Post</button>
+                </form>
+                <div id="feed"></div>
+            </div>
+            <div id="profile-view" style="display: none;">
+                <img id="profile-pfp" class="profile-pfp" src="">
+                <h2>@<span id="profile-username"></span></h2>
+                <div class="stats" id="profile-stats"></div>
+                <p id="profile-bio"></p>
+                <button id="follow-btn">Follow</button>
+                <div class="profile-tabs">
+                    <div class="tab active" id="posts-tab">Posts</div>
+                    <div class="tab" id="replies-tab">Replies</div>
+                </div>
+                <div id="profile-posts"></div>
+                <div id="profile-replies" style="display: none;"></div>
+            </div>
+        </div>
+        <div id="sidebar-right">
+            <div id="trending">
+                <h3>Trending</h3>
+                <div id="trending-content"></div>
+            </div>
+            <div id="top-posts" style="margin-top: 20px;">
+                <h3>Top Posts</h3>
+                <div id="top-posts-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function unbanGhastical() {
+            let accounts = JSON.parse(localStorage.getItem('accounts')) || {};
+            if (accounts['ghastical'] && accounts['ghastical'].banned) {
+                accounts['ghastical'].banned = false;
+                localStorage.setItem('accounts', JSON.stringify(accounts));
+                console.log('User "ghastical" has been unbanned.');
+            }
+        })();
+
+        let accounts = JSON.parse(localStorage.getItem('accounts')) || {};
+        let posts = JSON.parse(localStorage.getItem('posts')) || [];
+        let bannedPosts = JSON.parse(localStorage.getItem('bannedPosts')) || {};
+        let currentUser = localStorage.getItem('currentUser') || null;
+        const defaultPfp = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#AAB8C2"/><path d="M50 20c-15 0-25 10-25 25s10 25 25 25 25-10 25-25-10-25-25-25z" fill="#657786"/></svg>`);
+
+        const loginPrompt = document.getElementById('login-prompt');
+        const app = document.getElementById('app');
+        const usernameInput = document.getElementById('username-input');
+        const passwordInput = document.getElementById('password-input');
+        const loginBtn = document.getElementById('login-btn');
+        const registerBtn = document.getElementById('register-btn');
+        const loginError = document.getElementById('login-error');
+        const postForm = document.getElementById('post-form');
+        const postInput = document.getElementById('post-input');
+        const charCount = document.getElementById('char-count');
+        const feed = document.getElementById('feed');
+        const currentUsernameSpan = document.getElementById('current-username');
+        const profileCustomize = document.getElementById('profile-customize');
+        const moderationPanel = document.getElementById('moderation-panel');
+        const accountList = document.getElementById('account-list');
+        const closeModeration = document.getElementById('close-moderation');
+        const bioInput = document.getElementById('bio-input');
+        const pfpUpload = document.getElementById('pfp-upload');
+        const pfpCanvas = document.getElementById('pfp-canvas');
+        const zoomBar = document.getElementById('zoom-bar');
+        const saveCustomize = document.getElementById('save-customize');
+        const feedView = document.getElementById('feed-view');
+        const profileView = document.getElementById('profile-view');
+        const profilePfp = document.getElementById('profile-pfp');
+        const profileUsername = document.getElementById('profile-username');
+        const profileStats = document.getElementById('profile-stats');
+        const profileBio = document.getElementById('profile-bio');
+        const followBtn = document.getElementById('follow-btn');
+        const profilePosts = document.getElementById('profile-posts');
+        const profileReplies = document.getElementById('profile-replies');
+        const postsTab = document.getElementById('posts-tab');
+        const repliesTab = document.getElementById('replies-tab');
+        const moderationLink = document.getElementById('moderation-link');
+        const searchBar = document.getElementById('search-bar');
+        const searchResults = document.getElementById('search-results');
+        const searchContent = document.getElementById('search-content');
+        const closeSearch = document.getElementById('close-search');
+        const followersPopup = document.getElementById('followers-popup');
+        const followersContent = document.getElementById('followers-content');
+        const closeFollowers = document.getElementById('close-followers');
+        const themeToggle = document.getElementById('theme-toggle');
+        const trendingContent = document.getElementById('trending-content');
+        const topPostsContent = document.getElementById('top-posts-content');
+
+        let ctx = pfpCanvas.getContext('2d');
+        let img = new Image();
+        let scale = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+        let isDragging = false;
+        let isZooming = false;
+        let startX, startY, zoomStartY;
+        pfpCanvas.width = 300;
+        pfpCanvas.height = 300;
+
+        let lastView = localStorage.getItem('lastView') || 'home';
+        let lastProfileUser = localStorage.getItem('lastProfileUser') || null;
+        let expandedPostId = null;
+        let theme = localStorage.getItem('theme') || 'dark';
+        document.body.className = theme;
+
+        const bannedWords = [
+            'nigger', 'nigga', 'fuck', 'shit', 'bitch', 'asshole', 'cunt', 'dick', 'pussy', 'fag',
+            'slut', 'whore', 'cock', 'bastard', 'damn', 'prick', 'twat', 'fucking', 'shitting', 'ass'
+        ];
+        const commonWords = ['the', 'and', 'to', 'a', 'in', 'is', 'it', 'you', 'of', 'for', 'on', 'that', 'this', 'i', 'with'];
+
+        function containsProfanity(text) {
+            const lowerText = text.toLowerCase();
+            return bannedWords.some(word => lowerText.includes(word));
+        }
+
+        function containsEmoji(text) {
+            const emojiRegex = /[\p{Emoji_Presentation}|\p{Emoji}\uFE0F]/u;
+            return emojiRegex.test(text);
+        }
+
+        function normalizeUsername(username) {
+            return username.toLowerCase();
+        }
+
+        function isAdmin() {
+            return currentUser && accounts[currentUser] && accounts[currentUser].isAdmin;
+        }
+
+        loginBtn.addEventListener('click', () => {
+            const username = normalizeUsername(usernameInput.value.trim());
+            const password = passwordInput.value;
+            if (!username || !password || !accounts[username] || accounts[username].password !== password) {
+                loginError.textContent = 'Invalid credentials';
+                loginError.style.display = 'block';
+            } else if (accounts[username].banned) {
+                loginError.textContent = 'This account has been banned';
+                loginError.style.display = 'block';
+            } else {
+                currentUser = username;
+                if (username === 'ghastical') accounts[username].isAdmin = true;
+                localStorage.setItem('currentUser', currentUser);
+                currentUsernameSpan.textContent = username;
+                loginPrompt.style.display = 'none';
+                app.style.display = 'flex';
+                moderationLink.style.display = isAdmin() ? 'block' : 'none';
+                lastView = 'home';
+                localStorage.setItem('lastView', lastView);
+                renderFeed();
+                renderTrending();
+                renderTopPosts();
+            }
+        });
+
+        registerBtn.addEventListener('click', () => {
+            const username = normalizeUsername(usernameInput.value.trim());
+            const password = passwordInput.value;
+            if (!username || username.length < 3 || accounts[username] || !password || password.length < 6) {
+                loginError.textContent = 'Invalid username or password (min 3 chars username, 6 chars password)';
+                loginError.style.display = 'block';
+            } else if (containsProfanity(username)) {
+                loginError.textContent = 'Username contains inappropriate language';
+                loginError.style.display = 'block';
+            } else if (containsEmoji(username)) {
+                loginError.textContent = 'Username cannot contain emojis';
+                loginError.style.display = 'block';
+            } else {
+                accounts[username] = {
+                    password,
+                    bio: '',
+                    pfp: defaultPfp,
+                    followers: [],
+                    following: [],
+                    likes: [],
+                    reposts: [],
+                    pinnedPost: null,
+                    isAdmin: username === 'ghastical',
+                    banned: false,
+                    isVerified: false
+                };
+                localStorage.setItem('accounts', JSON.stringify(accounts));
+                currentUser = username;
+                localStorage.setItem('currentUser', currentUser);
+                currentUsernameSpan.textContent = username;
+                loginPrompt.style.display = 'none';
+                app.style.display = 'flex';
+                moderationLink.style.display = isAdmin() ? 'block' : 'none';
+                lastView = 'home';
+                localStorage.setItem('lastView', lastView);
+                renderFeed();
+                renderTrending();
+                renderTopPosts();
+            }
+        });
+
+        postInput.addEventListener('input', () => {
+            charCount.textContent = `${postInput.value.length}/280`;
+        });
+
+        postForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!currentUser || accounts[currentUser].banned || !postInput.value.trim()) return;
+            const post = {
+                id: Date.now(),
+                username: currentUser,
+                content: postInput.value.trim(),
+                time: new Date().toLocaleString(),
+                timestamp: Date.now(),
+                likes: [],
+                retweets: [],
+                replies: [],
+                views: 0,
+                viewedBy: []
+            };
+            posts.unshift(post);
+            localStorage.setItem('posts', JSON.stringify(posts));
+            postInput.value = '';
+            charCount.textContent = '0/280';
+            renderFeed();
+            renderTrending();
+            renderTopPosts();
+            if (profileView.style.display === 'block') updateProfileView(currentUser);
+        });
+
+        function getTrendingTopics() {
+            const wordCount = {};
+            posts.filter(p => !accounts[normalizeUsername(p.username)]?.banned && !p.isRepost)
+                .forEach(post => {
+                    const words = post.content.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/);
+                    words.forEach(word => {
+                        if (word.length > 3 && !commonWords.includes(word)) {
+                            wordCount[word] = (wordCount[word] || 0) + 1;
+                        }
+                    });
+                });
+            return Object.entries(wordCount)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([word, count]) => ({ topic: word, count }));
+        }
+
+        function renderTrending() {
+            const trending = getTrendingTopics();
+            trendingContent.innerHTML = '';
+            if (trending.length === 0) {
+                trendingContent.innerHTML = '<p>No trending topics yet.</p>';
+            } else {
+                trending.forEach(({ topic, count }) => {
+                    trendingContent.innerHTML += `<div>${topic} - ${count} posts</div>`;
+                });
+            }
+        }
+
+        function renderFeed() {
+            if (!currentUser) return;
+            feed.innerHTML = '';
+            if (expandedPostId) {
+                const item = posts.find(p => p.id === expandedPostId) || findReply(posts, expandedPostId);
+                if (item) {
+                    if (!item.viewedBy.includes(currentUser)) {
+                        item.views += 1;
+                        item.viewedBy.push(currentUser);
+                        localStorage.setItem('posts', JSON.stringify(posts));
+                    }
+                    const account = accounts[normalizeUsername(item.username)] || { pfp: defaultPfp };
+                    const isLiked = item.likes.includes(currentUser);
+                    const canDelete = normalizeUsername(item.username) === normalizeUsername(currentUser) || isAdmin();
+                    const parentPost = findParentPost(posts, expandedPostId);
+                    feed.innerHTML = (parentPost && parentPost.id !== item.id ? `<div class="back-link" onclick="toggleThread(${parentPost.id})">Back to original post</div>` : '') + renderPost(item, account, isLiked, canDelete, false);
+                    const repliesDiv = document.getElementById(`replies-${item.id}`);
+                    renderReplies(item.replies, repliesDiv, item.id);
+                    repliesDiv.style.display = 'block';
+                }
+            } else {
+                const following = accounts[currentUser].following || [];
+                let relevantPosts = posts.filter(post => !accounts[normalizeUsername(post.username)]?.banned).slice().sort((a, b) => {
+                    const aIsFollowed = following.includes(normalizeUsername(a.username));
+                    const bIsFollowed = following.includes(normalizeUsername(b.username));
+                    return (bIsFollowed - aIsFollowed) || (b.id - a.id);
+                });
+                relevantPosts.forEach(post => {
+                    if (!post.viewedBy.includes(currentUser)) {
+                        post.views += 1;
+                        post.viewedBy.push(currentUser);
+                    }
+                    const account = accounts[normalizeUsername(post.username)] || { pfp: defaultPfp };
+                    const isLiked = post.likes.includes(currentUser);
+                    const canDelete = normalizeUsername(post.username) === normalizeUsername(currentUser) || isAdmin();
+                    feed.innerHTML += renderPost(post, account, isLiked, canDelete, false);
+                });
+                localStorage.setItem('posts', JSON.stringify(posts));
+                if (relevantPosts.length === 0) feed.innerHTML = '<p>No posts yet.</p>';
+            }
+            renderTrending();
+            renderTopPosts();
+        }
+
+        function renderPost(item, account, isLiked, canDelete, showRepostHeader = true, parentId = null, isProfileView = false) {
+            const isVerified = accounts[normalizeUsername(item.username)]?.isVerified;
+            const isRepost = item.isRepost || false;
+            const repostHeader = isRepost && showRepostHeader ? `<div class="repost-header">@${item.reposter} reposted</div>` : '';
+            const contentClass = isRepost && showRepostHeader ? 'repost-content' : 'post-content';
+            const isPinned = isProfileView && accounts[normalizeUsername(item.username)]?.pinnedPost === item.id && !isRepost && !parentId;
+            const canEdit = normalizeUsername(item.username) === normalizeUsername(currentUser) && (Date.now() - item.timestamp) < 5 * 60 * 1000 && !isRepost && !parentId;
+            const pinText = isPinned ? 'Unpin' : 'Pin';
+            return `
+                <div class="post ${isPinned ? 'pinned' : ''}" data-id="${item.id}">
+                    <img class="post-pfp" src="${account.pfp}" alt="PFP">
+                    <div class="post-content-wrapper">
+                        ${repostHeader}
+                        <div class="post-header">
+                            <span class="post-username" onclick="showUserProfile('${item.username}')">@${item.username}${isVerified ? ' ✅' : ''}</span>
+                            <span class="post-time">${item.time}</span>
+                        </div>
+                        <div class="${contentClass}" onclick="toggleThread(${item.id})">${item.content}</div>
+                        <div class="post-actions">
+                            <span class="post-action reply-btn" data-id="${item.id}">Reply (${(item.replies || []).length})</span>
+                            ${parentId ? '' : `
+                                <span class="post-action like-btn ${isLiked ? 'liked' : ''}" data-id="${item.id}">
+                                    ${isLiked ? '❤️' : 'Like'} (${item.likes.length})
+                                </span>
+                                <span class="post-action retweet-btn" data-id="${item.id}">
+                                    Repost (${item.retweets.length})
+                                </span>
+                                <span class="post-action">Views (${item.views || 0})</span>
+                                ${canEdit ? `<span class="post-action edit-btn" data-id="${item.id}">Edit</span>` : ''}
+                                ${isProfileView && normalizeUsername(item.username) === normalizeUsername(currentUser) && !isRepost && !parentId ? `<span class="post-action pin-btn" data-id="${item.id}">${pinText}</span>` : ''}
+                            `}
+                            ${canDelete ? `<span class="post-action delete-btn" data-id="${parentId || item.id}" data-reply-id="${item.id}">Delete</span>` : ''}
+                        </div>
+                        <form class="reply-form" id="reply-form-${item.id}">
+                            <textarea class="reply-input" rows="2" maxlength="280" placeholder="Post your reply"></textarea>
+                            <button type="submit" class="reply-btn">Reply</button>
+                        </form>
+                        <div class="replies" id="replies-${item.id}"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderReplies(replies, container, parentId) {
+            container.innerHTML = '';
+            (replies || []).forEach(reply => {
+                if (!reply.viewedBy.includes(currentUser)) {
+                    reply.views += 1;
+                    reply.viewedBy.push(currentUser);
+                    localStorage.setItem('posts', JSON.stringify(posts));
+                }
+                const replyAccount = accounts[normalizeUsername(reply.username)] || { pfp: defaultPfp };
+                const canDelete = normalizeUsername(reply.username) === normalizeUsername(currentUser) || isAdmin();
+                container.innerHTML += renderPost(reply, replyAccount, false, canDelete, false, parentId);
+                const subRepliesDiv = document.getElementById(`replies-${reply.id}`);
+                renderReplies(reply.replies, subRepliesDiv, reply.id);
+            });
+        }
+
+        window.toggleThread = function(id) {
+            expandedPostId = expandedPostId === id ? null : id;
+            renderFeed();
+        };
+
+        function findParentPost(items, replyId) {
+            for (let item of items) {
+                if (item.id === replyId) return item;
+                const found = findReply(item.replies || [], replyId);
+                if (found) return item;
+            }
+            return null;
+        }
+
+        function findReply(items, id) {
+            for (let item of items) {
+                if (item.id === id) return item;
+                const found = findReply(item.replies || [], id);
+                if (found) return found;
+            }
+            return null;
+        }
+
+        function collectUserPostsAndReplies(username) {
+            const userPosts = posts.filter(post => normalizeUsername(post.username) === normalizeUsername(username));
+            const userReplies = [];
+            const collectReplies = (replies) => {
+                (replies || []).forEach(reply => {
+                    if (normalizeUsername(reply.username) === normalizeUsername(username)) {
+                        userReplies.push(reply);
+                    }
+                    collectReplies(reply.replies);
+                });
+            };
+            posts.forEach(post => collectReplies(post.replies));
+            return { posts: userPosts, replies: userReplies };
+        }
+
+        function removeUserPostsAndReplies(username) {
+            posts = posts.filter(post => normalizeUsername(post.username) !== normalizeUsername(username));
+            const removeReplies = (replies) => {
+                for (let i = replies.length - 1; i >= 0; i--) {
+                    if (normalizeUsername(replies[i].username) === normalizeUsername(username)) {
+                        replies.splice(i, 1);
+                    } else {
+                        removeReplies(replies[i].replies || []);
+                    }
+                }
+            };
+            posts.forEach(post => removeReplies(post.replies || []));
+        }
+
+        function updateProfileView(username) {
+            const normalizedUsername = normalizeUsername(username);
+            const account = accounts[normalizedUsername];
+            if (!account) {
+                profileView.innerHTML = '<p>User not found.</p>';
+                return;
+            }
+            profilePfp.src = account.pfp || defaultPfp;
+            profileUsername.textContent = `${username}${account.isVerified ? ' ✅' : ''}`;
+            profileStats.innerHTML = `
+                <span class="stat" onclick="showFollowers('${normalizedUsername}')">${(account.followers || []).length} Followers</span>
+                <span class="stat">${(account.following || []).length} Following</span>
+            `;
+            profileBio.textContent = account.bio || 'No bio yet';
+            followBtn.style.display = normalizedUsername === currentUser ? 'none' : 'block';
+            followBtn.textContent = (account.followers || []).includes(currentUser) ? 'Following' : 'Follow';
+            followBtn.classList.toggle('following', (account.followers || []).includes(currentUser));
+            
+            profilePosts.innerHTML = '';
+            const userPosts = posts.filter(post => normalizeUsername(post.username) === normalizedUsername && !post.isRepost);
+            const userReposts = (account.reposts || []).map(repost => ({
+                id: repost.id,
+                username: repost.originalUsername,
+                content: repost.content,
+                time: repost.time,
+                timestamp: repost.timestamp || Date.now(),
+                likes: [],
+                retweets: [],
+                replies: [],
+                views: posts.find(p => p.id === repost.id)?.views || 0,
+                viewedBy: posts.find(p => p.id === repost.id)?.viewedBy || [],
+                isRepost: true,
+                reposter: normalizedUsername
+            }));
+            const allPosts = [...userPosts, ...userReposts].sort((a, b) => {
+                if (account.pinnedPost === a.id && !a.isRepost) return -1;
+                if (account.pinnedPost === b.id && !b.isRepost) return 1;
+                return b.id - a.id;
+            });
+            if (allPosts.length === 0) {
+                profilePosts.innerHTML = '<p>No posts yet.</p>';
+            } else {
+                allPosts.forEach(post => {
+                    const postAccount = accounts[normalizeUsername(post.username)] || { pfp: defaultPfp };
+                    const isLiked = post.likes.includes(currentUser);
+                    const canDelete = normalizeUsername(post.reposter || post.username) === normalizeUsername(currentUser) || isAdmin();
+                    profilePosts.innerHTML += renderPost(post, postAccount, isLiked, canDelete, true, null, true);
+                });
+            }
+
+            profileReplies.innerHTML = '';
+            const userReplies = [];
+            const collectReplies = (replies, parentPost) => {
+                (replies || []).forEach(reply => {
+                    if (normalizeUsername(reply.username) === normalizedUsername) {
+                        userReplies.push({ parentPost, reply });
+                    }
+                    collectReplies(reply.replies, parentPost);
+                });
+            };
+            posts.forEach(post => collectReplies(post.replies, post));
+            if (userReplies.length === 0) {
+                profileReplies.innerHTML = '<p>No replies yet.</p>';
+            } else {
+                userReplies.forEach(({ parentPost, reply }) => {
+                    const replyAccount = accounts[normalizeUsername(reply.username)] || { pfp: defaultPfp };
+                    const parentAccount = accounts[normalizeUsername(parentPost.username)] || { pfp: defaultPfp };
+                    const canDelete = normalizeUsername(reply.username) === normalizeUsername(currentUser) || isAdmin();
+                    const parentSnippet = parentPost.content.length > 50 ? parentPost.content.substring(0, 50) + '...' : parentPost.content;
+                    profileReplies.innerHTML += `
+                        <div class="post" data-id="${reply.id}">
+                            <div class="reply-context">
+                                <img class="reply-context-pfp" src="${parentAccount.pfp}" alt="PFP">
+                                <div class="reply-context-content">
+                                    <span class="post-username" onclick="showUserProfile('${parentPost.username}')">@${parentPost.username}</span>
+                                    <div>${parentSnippet}</div>
+                                </div>
+                            </div>
+                            ${renderPost(reply, replyAccount, false, canDelete, false, parentPost.id, true)}
+                        </div>
+                    `;
+                    const subRepliesDiv = document.getElementById(`replies-${reply.id}`);
+                    renderReplies(reply.replies, subRepliesDiv, reply.id);
+                    subRepliesDiv.style.display = 'block';
+                });
+            }
+
+            postsTab.onclick = () => {
+                postsTab.classList.add('active');
+                repliesTab.classList.remove('active');
+                profilePosts.style.display = 'block';
+                profileReplies.style.display = 'none';
+            };
+            repliesTab.onclick = () => {
+                postsTab.classList.remove('active');
+                repliesTab.classList.add('active');
+                profilePosts.style.display = 'none';
+                profileReplies.style.display = 'block';
+            };
+        }
+
+        window.showUserProfile = function(username) {
+            feedView.style.display = 'none';
+            profileView.style.display = 'block';
+            expandedPostId = null;
+            lastView = 'profile';
+            lastProfileUser = username;
+            localStorage.setItem('lastView', lastView);
+            localStorage.setItem('lastProfileUser', lastProfileUser);
+            updateProfileView(username);
+        };
+
+        window.showFollowers = function(username) {
+            const account = accounts[username];
+            followersContent.innerHTML = '';
+            if (account && account.followers && account.followers.length > 0) {
+                account.followers.forEach(follower => {
+                    const followerAccount = accounts[follower] || { pfp: defaultPfp };
+                    followersContent.innerHTML += `
+                        <div class="follower-item" onclick="showUserProfile('${follower}')">
+                            <img class="post-pfp" src="${followerAccount.pfp}" alt="PFP">
+                            <span>@${follower}</span>
+                        </div>
+                    `;
+                });
+            } else {
+                followersContent.innerHTML = '<p>No followers yet.</p>';
+            }
+            followersPopup.style.display = 'block';
+        };
+
+        function renderModerationPanel() {
+            if (!isAdmin()) return;
+            accountList.innerHTML = '';
+            Object.keys(accounts).forEach(username => {
+                if (username === 'ghastical') return;
+                const account = accounts[username];
+                accountList.innerHTML += `
+                    <div class="account-item">
+                        <span>@${username}${account.isVerified ? ' ✅' : ''}</span>
+                        <div>
+                            <button class="ban-btn ${account.banned ? 'banned' : ''}" data-username="${username}">
+                                ${account.banned ? 'Unban' : 'Ban'}
+                            </button>
+                            <button class="verify-btn ${account.isVerified ? 'verified' : ''}" data-username="${username}">
+                                ${account.isVerified ? 'Unverify' : 'Verify'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderSearchResults(query) {
+            searchContent.innerHTML = '';
+            if (!query) {
+                const allUsers = Object.keys(accounts).filter(u => !accounts[u].banned);
+                const randomUsers = allUsers.sort(() => 0.5 - Math.random()).slice(0, 5);
+                randomUsers.forEach(username => {
+                    searchContent.innerHTML += `
+                        <div class="search-item" onclick="showUserProfile('${username}')">@${username}</div>
+                    `;
+                });
+            } else {
+                const userMatches = Object.keys(accounts).filter(u => u.includes(query.toLowerCase()) && !accounts[u].banned);
+                const postMatches = posts.filter(p => p.content.toLowerCase().includes(query.toLowerCase()) && !accounts[normalizeUsername(p.username)].banned);
+                userMatches.slice(0, 5).forEach(username => {
+                    searchContent.innerHTML += `
+                        <div class="search-item" onclick="showUserProfile('${username}')">@${username}</div>
+                    `;
+                });
+                postMatches.slice(0, 5).forEach(post => {
+                    const snippet = post.content.length > 50 ? post.content.substring(0, 50) + '...' : post.content;
+                    searchContent.innerHTML += `
+                        <div class="search-item" onclick="toggleThread(${post.id})">@${post.username}: "${snippet}"</div>
+                    `;
+                });
+                if (!userMatches.length && !postMatches.length) {
+                    searchContent.innerHTML = '<p>No results found.</p>';
+                }
+            }
+            searchResults.style.display = 'block';
+        }
+
+        function renderTopPosts() {
+            const topPosts = posts.filter(p => !p.isRepost && !accounts[normalizeUsername(p.username)].banned)
+                .sort((a, b) => b.views - a.views)
+                .slice(0, 3);
+            topPostsContent.innerHTML = '';
+            topPosts.forEach(post => {
+                const snippet = post.content.length > 30 ? post.content.substring(0, 30) + '...' : post.content;
+                topPostsContent.innerHTML += `
+                    <div class="search-item" onclick="toggleThread(${post.id})">
+                        @${post.username}: "${snippet}" (${post.views} views)
+                    </div>
+                `;
+            });
+            if (topPosts.length === 0) topPostsContent.innerHTML = '<p>No top posts yet.</p>';
+        }
+
+        searchBar.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                renderSearchResults(searchBar.value.trim());
+            }
+        });
+
+        searchBar.addEventListener('focus', () => {
+            if (!searchBar.value.trim()) {
+                renderSearchResults('');
+            }
+        });
+
+        closeSearch.addEventListener('click', () => {
+            searchResults.style.display = 'none';
+            searchBar.value = '';
+        });
+
+        closeFollowers.addEventListener('click', () => {
+            followersPopup.style.display = 'none';
+        });
+
+        themeToggle.addEventListener('click', () => {
+            theme = theme === 'dark' ? 'light' : 'dark';
+            document.body.className = theme;
+            localStorage.setItem('theme', theme);
+        });
+
+        function drawImage() {
+            ctx.clearRect(0, 0, pfpCanvas.width, pfpCanvas.height);
+            const size = Math.min(img.width, img.height) * scale;
+            const x = offsetX + (300 - size) / 2;
+            const y = offsetY + (300 - size) / 2;
+            ctx.drawImage(img, x, y, size, size);
+            ctx.globalCompositeOperation = 'destination-in';
+            ctx.beginPath();
+            ctx.arc(150, 150, 150, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        pfpUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        scale = 1;
+                        offsetX = 0;
+                        offsetY = 0;
+                        zoomBar.style.top = '120px';
+                        drawImage();
+                    };
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        zoomBar.addEventListener('mousedown', (e) => {
+            isZooming = true;
+            zoomStartY = e.clientY;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isZooming) {
+                const deltaY = zoomStartY - e.clientY;
+                let newTop = parseInt(zoomBar.style.top || '120') + deltaY;
+                newTop = Math.max(0, Math.min(newTop, 240));
+                zoomBar.style.top = `${newTop}px`;
+                scale = 1 + (240 - newTop) / 120;
+                drawImage();
+                zoomStartY = e.clientY;
+            } else if (isDragging) {
+                offsetX = e.offsetX - startX;
+                offsetY = e.offsetY - startY;
+                drawImage();
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isZooming = false;
+            isDragging = false;
+        });
+
+        pfpCanvas.addEventListener('mousedown', (e) => {
+            if (!isZooming) {
+                isDragging = true;
+                startX = e.offsetX - offsetX;
+                startY = e.offsetY - offsetY;
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!currentUser || accounts[currentUser].banned) return;
+            const target = e.target;
+            if (target.classList.contains('like-btn')) {
+                const postId = parseInt(target.dataset.id);
+                const post = posts.find(p => p.id === postId);
+                if (post) {
+                    const index = post.likes.indexOf(currentUser);
+                    if (index === -1) post.likes.push(currentUser);
+                    else post.likes.splice(index, 1);
+                    localStorage.setItem('posts', JSON.stringify(posts));
+                    renderFeed();
+                    if (profileView.style.display === 'block') updateProfileView(profileUsername.textContent);
+                }
+            } else if (target.classList.contains('retweet-btn')) {
+                const postId = parseInt(target.dataset.id);
+                const post = posts.find(p => p.id === postId);
+                if (post && !post.retweets.includes(currentUser)) {
+                    post.retweets.push(currentUser);
+                    accounts[currentUser].reposts = accounts[currentUser].reposts || [];
+                    const repost = {
+                        id: Date.now(),
+                        originalUsername: post.username,
+                        content: post.content,
+                        time: new Date().toLocaleString(),
+                        timestamp: Date.now()
+                    };
+                    accounts[currentUser].reposts.unshift(repost);
+                    posts.unshift({
+                        id: repost.id,
+                        username: post.username,
+                        content: post.content,
+                        time: repost.time,
+                        timestamp: repost.timestamp,
+                        likes: [],
+                        retweets: [],
+                        replies: [],
+                        views: 0,
+                        viewedBy: [],
+                        isRepost: true,
+                        reposter: currentUser
+                    });
+                    localStorage.setItem('posts', JSON.stringify(posts));
+                    localStorage.setItem('accounts', JSON.stringify(accounts));
+                    renderFeed();
+                    renderTrending();
+                    renderTopPosts();
+                    if (profileView.style.display === 'block') updateProfileView(profileUsername.textContent);
+                }
+            } else if (target.classList.contains('delete-btn')) {
+                const postId = parseInt(target.dataset.id);
+                const replyId = parseInt(target.dataset.replyId);
+                const post = posts.find(p => p.id === postId);
+                if (!post) return;
+                if (replyId !== postId) {
+                    const deleteReply = (replies) => {
+                        for (let i = 0; i < replies.length; i++) {
+                            if (replies[i].id === replyId && (normalizeUsername(replies[i].username) === normalizeUsername(currentUser) || isAdmin())) {
+                                replies.splice(i, 1);
+                                return true;
+                            }
+                            if (replies[i].replies && deleteReply(replies[i].replies)) return true;
+                        }
+                        return false;
+                    };
+                    deleteReply(post.replies);
+                    localStorage.setItem('posts', JSON.stringify(posts));
+                } else if (normalizeUsername(post.username) === normalizeUsername(currentUser) || isAdmin() || (post.isRepost && normalizeUsername(post.reposter) === normalizeUsername(currentUser))) {
+                    if (accounts[normalizeUsername(post.username)]?.pinnedPost === post.id) {
+                        accounts[normalizeUsername(post.username)].pinnedPost = null;
+                        localStorage.setItem('accounts', JSON.stringify(accounts));
+                    }
+                    posts.splice(posts.indexOf(post), 1);
+                    if (post.isRepost) {
+                        accounts[normalizeUsername(post.reposter)].reposts = accounts[normalizeUsername(post.reposter)].reposts.filter(r => r.id !== post.id);
+                        localStorage.setItem('accounts', JSON.stringify(accounts));
+                    }
+                    localStorage.setItem('posts', JSON.stringify(posts));
+                }
+                renderFeed();
+                renderTrending();
+                renderTopPosts();
+                if (profileView.style.display === 'block') updateProfileView(profileUsername.textContent);
+            } else if (target.classList.contains('reply-btn')) {
+                const postId = parseInt(target.dataset.id);
+                const replyForm = document.getElementById(`reply-form-${postId}`);
+                replyForm.style.display = replyForm.style.display === 'flex' ? 'none' : 'flex';
+                if (replyForm.style.display === 'flex') replyForm.querySelector('.reply-input').focus();
+            } else if (target.classList.contains('edit-btn')) {
+                const postId = parseInt(target.dataset.id);
+                const post = posts.find(p => p.id === postId);
+                if (post && normalizeUsername(post.username) === normalizeUsername(currentUser)) {
+                    const newContent = prompt('Edit your post:', post.content);
+                    if (newContent && newContent.trim() && newContent !== post.content) {
+                        post.content = newContent.trim();
+                        post.time = new Date().toLocaleString();
+                        localStorage.setItem('posts', JSON.stringify(posts));
+                        renderFeed();
+                        renderTrending();
+                        if (profileView.style.display === 'block') updateProfileView(profileUsername.textContent);
+                    }
+                }
+            } else if (target.classList.contains('pin-btn')) {
+                const postId = parseInt(target.dataset.id);
+                const post = posts.find(p => p.id === postId);
+                if (post && normalizeUsername(post.username) === normalizeUsername(currentUser) && !post.isRepost) {
+                    const normalizedUser = normalizeUsername(currentUser);
+                    if (accounts[normalizedUser].pinnedPost === postId) {
+                        accounts[normalizedUser].pinnedPost = null;
+                    } else {
+                        accounts[normalizedUser].pinnedPost = postId;
+                    }
+                    localStorage.setItem('accounts', JSON.stringify(accounts));
+                    updateProfileView(currentUser); // Only update profile view
+                }
+            } else if (target.classList.contains('ban-btn')) {
+                const username = target.dataset.username;
+                if (isAdmin() && username !== 'ghastical') {
+                    const normalizedUsername = normalizeUsername(username);
+                    if (!accounts[normalizedUsername].banned) {
+                        const userContent = collectUserPostsAndReplies(normalizedUsername);
+                        bannedPosts[normalizedUsername] = userContent;
+                        removeUserPostsAndReplies(normalizedUsername);
+                        accounts[normalizedUsername].banned = true;
+                        accounts[normalizedUsername].pinnedPost = null;
+                        if (normalizedUsername === currentUser) {
+                            currentUser = null;
+                            localStorage.removeItem('currentUser');
+                            app.style.display = 'none';
+                            loginPrompt.style.display = 'block';
+                        }
+                    } else {
+                        if (bannedPosts[normalizedUsername]) {
+                            const restoredPosts = bannedPosts[normalizedUsername].posts.filter(p => !p.isRepost);
+                            posts.push(...restoredPosts);
+                            const restoreReplies = (sourceReplies, targetReplies) => {
+                                sourceReplies.forEach(reply => {
+                                    const parent = posts.find(p => p.id === findParentPost(posts, reply.id)?.id);
+                                    if (parent) {
+                                        parent.replies = parent.replies || [];
+                                        parent.replies.push(reply);
+                                    }
+                                    restoreReplies(reply.replies || [], targetReplies);
+                                });
+                            };
+                            restoreReplies(bannedPosts[normalizedUsername].replies, posts);
+                            delete bannedPosts[normalizedUsername];
+                        }
+                        accounts[normalizedUsername].banned = false;
+                    }
+                    localStorage.setItem('accounts', JSON.stringify(accounts));
+                    localStorage.setItem('posts', JSON.stringify(posts));
+                    localStorage.setItem('bannedPosts', JSON.stringify(bannedPosts));
+                    renderModerationPanel();
+                    renderFeed();
+                    renderTrending();
+                    renderTopPosts();
+                    if (profileView.style.display === 'block') updateProfileView(profileUsername.textContent);
+                }
+            } else if (target.classList.contains('verify-btn')) {
+                const username = target.dataset.username;
+                if (isAdmin() && username !== 'ghastical') {
+                    accounts[normalizeUsername(username)].isVerified = !accounts[normalizeUsername(username)].isVerified;
+                    localStorage.setItem('accounts', JSON.stringify(accounts));
+                    renderModerationPanel();
+                    renderFeed();
+                    if (profileView.style.display === 'block') updateProfileView(profileUsername.textContent);
+                }
+            }
+        });
+
+        document.addEventListener('submit', (e) => {
+            if (!currentUser || accounts[currentUser].banned || !e.target.classList.contains('reply-form')) return;
+            e.preventDefault();
+            const targetId = parseInt(e.target.id.split('-')[2]);
+            let targetItem = findReply(posts, targetId);
+            if (!targetItem) return;
+            const replyInput = e.target.querySelector('.reply-input');
+            const content = replyInput.value.trim();
+            if (!content) return;
+            const reply = {
+                id: Date.now(),
+                username: currentUser,
+                content,
+                time: new Date().toLocaleString(),
+                timestamp: Date.now(),
+                likes: [],
+                retweets: [],
+                replies: [],
+                views: 0,
+                viewedBy: []
+            };
+            targetItem.replies = targetItem.replies || [];
+            targetItem.replies.push(reply);
+            localStorage.setItem('posts', JSON.stringify(posts));
+            replyInput.value = '';
+            e.target.style.display = 'none';
+            renderFeed();
+            renderTrending();
+            renderTopPosts();
+            if (profileView.style.display === 'block') updateProfileView(profileUsername.textContent);
+        });
+
+        followBtn.addEventListener('click', () => {
+            if (!currentUser || accounts[currentUser].banned) return;
+            const targetUser = normalizeUsername(profileUsername.textContent.replace(' ✅', ''));
+            if (targetUser === currentUser) return;
+            const account = accounts[targetUser];
+            if (!account) return;
+            const isFollowing = (account.followers || []).includes(currentUser);
+            if (!isFollowing) {
+                account.followers = account.followers || [];
+                account.followers.push(currentUser);
+                accounts[currentUser].following = accounts[currentUser].following || [];
+                accounts[currentUser].following.push(targetUser);
+                followBtn.textContent = 'Following';
+                followBtn.classList.add('following');
+            } else {
+                account.followers = (account.followers || []).filter(u => u !== currentUser);
+                accounts[currentUser].following = (accounts[currentUser].following || []).filter(u => u !== targetUser);
+                followBtn.textContent = 'Follow';
+                followBtn.classList.remove('following');
+            }
+            localStorage.setItem('accounts', JSON.stringify(accounts));
+            updateProfileView(targetUser);
+            renderFeed();
+        });
+
+        document.getElementById('profile-link').addEventListener('click', () => {
+            if (currentUser) {
+                lastView = 'profile';
+                lastProfileUser = currentUser;
+                localStorage.setItem('lastView', lastView);
+                localStorage.setItem('lastProfileUser', lastProfileUser);
+                showUserProfile(currentUser);
+            }
+        });
+        document.getElementById('home-link').addEventListener('click', () => {
+            feedView.style.display = 'block';
+            profileView.style.display = 'none';
+            profileCustomize.style.display = 'none';
+            moderationPanel.style.display = 'none';
+            searchResults.style.display = 'none';
+            followersPopup.style.display = 'none';
+            app.style.display = 'flex';
+            expandedPostId = null;
+            lastView = 'home';
+            localStorage.setItem('lastView', lastView);
+            renderFeed();
+        });
+        document.getElementById('customize-link').addEventListener('click', () => {
+            if (!currentUser) return;
+            app.style.display = 'none';
+            profileCustomize.style.display = 'block';
+            lastView = 'customize';
+            localStorage.setItem('lastView', lastView);
+            bioInput.value = accounts[currentUser].bio || '';
+            img.src = accounts[currentUser].pfp || defaultPfp;
+            img.onload = () => {
+                scale = 1;
+                offsetX = 0;
+                offsetY = 0;
+                zoomBar.style.top = '120px';
+                drawImage();
+            };
+        });
+        document.getElementById('moderation-link').addEventListener('click', () => {
+            if (!isAdmin()) return;
+            app.style.display = 'none';
+            moderationPanel.style.display = 'block';
+            renderModerationPanel();
+            lastView = 'moderation';
+            localStorage.setItem('lastView', lastView);
+        });
+        closeModeration.addEventListener('click', () => {
+            moderationPanel.style.display = 'none';
+            app.style.display = 'flex';
+            lastView = 'home';
+            localStorage.setItem('lastView', lastView);
+            renderFeed();
+        });
+        saveCustomize.addEventListener('click', () => {
+            if (!currentUser) return;
+            accounts[currentUser].bio = bioInput.value.trim();
+            pfpCanvas.toBlob((blob) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    accounts[currentUser].pfp = reader.result;
+                    localStorage.setItem('accounts', JSON.stringify(accounts));
+                    profileCustomize.style.display = 'none';
+                    app.style.display = 'flex';
+                    lastView = 'home';
+                    localStorage.setItem('lastView', lastView);
+                    renderFeed();
+                };
+                reader.readAsDataURL(blob);
+            }, 'image/png');
+        });
+        document.getElementById('logout-link').addEventListener('click', () => {
+            currentUser = null;
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('lastView');
+            localStorage.removeItem('lastProfileUser');
+            app.style.display = 'none';
+            loginPrompt.style.display = 'block';
+            usernameInput.value = '';
+            passwordInput.value = '';
+            loginError.style.display = 'none';
+        });
+        document.getElementById('delete-account-link').addEventListener('click', () => {
+            if (!currentUser) return;
+            if (!confirm(`Are you sure you want to delete your account (@${currentUser})? This cannot be undone.`)) return;
+
+            posts = posts.filter(post => normalizeUsername(post.username) !== normalizeUsername(currentUser));
+            const deleteReplies = (replies) => {
+                for (let i = replies.length - 1; i >= 0; i--) {
+                    if (normalizeUsername(replies[i].username) === normalizeUsername(currentUser)) {
+                        replies.splice(i, 1);
+                    } else {
+                        deleteReplies(replies[i].replies || []);
+                    }
+                }
+            };
+            posts.forEach(post => deleteReplies(post.replies || []));
+
+            Object.keys(accounts).forEach(username => {
+                accounts[username].followers = (accounts[username].followers || []).filter(u => u !== currentUser);
+                accounts[username].following = (accounts[username].following || []).filter(u => u !== currentUser);
+            });
+
+            if (bannedPosts[currentUser]) delete bannedPosts[currentUser];
+
+            delete accounts[currentUser];
+            localStorage.setItem('accounts', JSON.stringify(accounts));
+            localStorage.setItem('posts', JSON.stringify(posts));
+            localStorage.setItem('bannedPosts', JSON.stringify(bannedPosts));
+
+            currentUser = null;
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('lastView');
+            localStorage.removeItem('lastProfileUser');
+            app.style.display = 'none';
+            loginPrompt.style.display = 'block';
+            usernameInput.value = '';
+            passwordInput.value = '';
+            loginError.style.display = 'none';
+        });
+
+        if (currentUser && accounts[currentUser]) {
+            app.style.display = 'flex';
+            loginPrompt.style.display = 'none';
+            currentUsernameSpan.textContent = currentUser;
+            moderationLink.style.display = isAdmin() ? 'block' : 'none';
+            if (lastView === 'home') {
+                feedView.style.display = 'block';
+                profileView.style.display = 'none';
+                profileCustomize.style.display = 'none';
+                moderationPanel.style.display = 'none';
+                renderFeed();
+                renderTrending();
+                renderTopPosts();
+            } else if (lastView === 'profile' && lastProfileUser) {
+                feedView.style.display = 'none';
+                profileView.style.display = 'block';
+                profileCustomize.style.display = 'none';
+                moderationPanel.style.display = 'none';
+                updateProfileView(lastProfileUser);
+            } else if (lastView === 'customize') {
+                app.style.display = 'none';
+                profileCustomize.style.display = 'block';
+                bioInput.value = accounts[currentUser].bio || '';
+                img.src = accounts[currentUser].pfp || defaultPfp;
+                img.onload = () => {
+                    scale = 1;
+                    offsetX = 0;
+                    offsetY = 0;
+                    zoomBar.style.top = '120px';
+                    drawImage();
+                };
+            } else if (lastView === 'moderation' && isAdmin()) {
+                app.style.display = 'none';
+                moderationPanel.style.display = 'block';
+                renderModerationPanel();
+            }
+        } else {
+            app.style.display = 'none';
+            loginPrompt.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
