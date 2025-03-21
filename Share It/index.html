@@ -248,7 +248,7 @@
                 loginError.style.display = 'block';
             } else {
                 currentUser = username;
-                if (username === 'ghastical') accounts[username].isAdmin = true;
+                if (username === 'kainyue') accounts[username].isAdmin = true;
                 localStorage.setItem('currentUser', currentUser);
                 accountsRef.set(accounts);
                 currentUsernameSpan.textContent = username;
@@ -285,7 +285,7 @@
                     likes: [],
                     reposts: [],
                     pinnedPost: null,
-                    isAdmin: username === 'peterii',
+                    isAdmin: username === 'kainyue',
                     canModerate: false,
                     banned: false,
                     isVerified: false
