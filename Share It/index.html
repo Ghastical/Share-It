@@ -95,58 +95,107 @@
         </div>
     </div>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js"></script>
-
+    <!-- WebRTC Peer Connection Script -->
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script>
-        // Initialize Firebase (replace with your config)
-        const firebaseConfig = {
-            apiKey: "AIzaSyD2oLwoTqGD8Wv8qDqM1lX1oA1qW1i8o8o",
-            authDomain: "post-it-sync.firebaseapp.com",
-            databaseURL: "https://post-it-sync-default-rtdb.firebaseio.com",
-            projectId: "post-it-sync",
-            storageBucket: "post-it-sync.appspot.com",
-            messagingSenderId: "123456789012",
-            appId: "1:123456789012:web:abcdef1234567890"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const postsRef = db.ref('posts');
-        const accountsRef = db.ref('accounts');
-        const bannedPostsRef = db.ref('bannedPosts');
-
-        // Load initial data from localStorage as fallback
         let accounts = JSON.parse(localStorage.getItem('accounts')) || {};
-        let posts = [];
+        let posts = JSON.parse(localStorage.getItem('posts')) || [];
         let bannedPosts = JSON.parse(localStorage.getItem('bannedPosts')) || {};
         let currentUser = localStorage.getItem('currentUser') || null;
         const defaultPfp = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="#AAB8C2"/><path d="M50 20c-15 0-25 10-25 25s10 25 25 25 25-10 25-25-10-25-25-25z" fill="#657786"/></svg>`);
 
-        // Sync posts from Firebase
-        postsRef.on('value', (snapshot) => {
-            const data = snapshot.val();
-            posts = data ? Object.values(data) : [];
+        // WebRTC PeerJS Setup
+        const peer = new Peer();
+        const connections = new Set();
+        let myId = null;
+
+        peer.on('open', (id) => {
+            myId = id;
+            console.log('My Peer ID:', myId);
+            // Connect to known peers (hardcoded or via a simple discovery mechanism)
+            const knownPeerIds = JSON.parse(localStorage.getItem('knownPeerIds')) || [];
+            knownPeerIds.forEach(peerId => connectToPeer(peerId));
+        });
+
+        peer.on('connection', (conn) => {
+            setupConnection(conn);
+        });
+
+        function connectToPeer(peerId) {
+            if (peerId === myId || connections.has(peerId)) return;
+            const conn = peer.connect(peerId);
+            setupConnection(conn);
+        }
+
+        function setupConnection(conn) {
+            conn.on('open', () => {
+                connections.add(conn.peer);
+                let knownPeerIds = JSON.parse(localStorage.getItem('knownPeerIds')) || [];
+                if (!knownPeerIds.includes(conn.peer)) {
+                    knownPeerIds.push(conn.peer);
+                    localStorage.setItem('knownPeerIds', JSON.stringify(knownPeerIds));
+                }
+                // Send current posts to new peer
+                conn.send({ type: 'sync', posts: posts });
+                console.log('Connected to:', conn.peer);
+            });
+
+            conn.on('data', (data) => {
+                if (data.type === 'sync') {
+                    mergePosts(data.posts);
+                } else if (data.type === 'newPost') {
+                    posts.unshift(data.post);
+                    localStorage.setItem('posts', JSON.stringify(posts));
+                    renderFeed();
+                    broadcastPost(data.post); // Relay to other peers
+                } else if (data.type === 'update') {
+                    updatePost(data.post);
+                }
+            });
+
+            conn.on('close', () => {
+                connections.delete(conn.peer);
+            });
+        }
+
+        function broadcastPost(post) {
+            connections.forEach(peerId => {
+                const conn = peer.connect(peerId);
+                conn.on('open', () => {
+                    conn.send({ type: 'newPost', post });
+                });
+            });
+        }
+
+        function broadcastUpdate(post) {
+            connections.forEach(peerId => {
+                const conn = peer.connect(peerId);
+                conn.on('open', () => {
+                    conn.send({ type: 'update', post });
+                });
+            });
+        }
+
+        function mergePosts(remotePosts) {
+            const merged = [...new Map([...posts, ...remotePosts].map(p => [p.id, p])).values()];
+            posts = merged.sort((a, b) => b.id - a.id);
+            localStorage.setItem('posts', JSON.stringify(posts));
             renderFeed();
-            renderTrending();
-            renderTopPosts();
-        });
+        }
 
-        // Sync accounts from Firebase
-        accountsRef.on('value', (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                accounts = data;
-                localStorage.setItem('accounts', JSON.stringify(accounts));
+        function updatePost(updatedPost) {
+            const post = posts.find(p => p.id === updatedPost.id);
+            if (post) {
+                Object.assign(post, updatedPost);
+                localStorage.setItem('posts', JSON.stringify(posts));
+                renderFeed();
             }
-        });
+        }
 
-        // Sync bannedPosts from Firebase
-        bannedPostsRef.on('value', (snapshot) => {
-            const data = snapshot.val();
-            bannedPosts = data || {};
-            localStorage.setItem('bannedPosts', JSON.stringify(bannedPosts));
-        });
+        // Share your Peer ID manually (e.g., via GitHub README or chat)
+        window.sharePeerId = function() {
+            prompt('Share this Peer ID with others to connect:', myId);
+        };
 
         const loginPrompt = document.getElementById('login-prompt');
         const app = document.getElementById('app');
@@ -248,9 +297,9 @@
                 loginError.style.display = 'block';
             } else {
                 currentUser = username;
-                if (username === 'kainyue') accounts[username].isAdmin = true;
+                if (username === 'ghastical') accounts[username].isAdmin = true;
                 localStorage.setItem('currentUser', currentUser);
-                accountsRef.set(accounts);
+                localStorage.setItem('accounts', JSON.stringify(accounts));
                 currentUsernameSpan.textContent = username;
                 loginPrompt.style.display = 'none';
                 app.style.display = 'flex';
@@ -285,12 +334,11 @@
                     likes: [],
                     reposts: [],
                     pinnedPost: null,
-                    isAdmin: username === 'kainyue',
+                    isAdmin: username === 'ghastical',
                     canModerate: false,
                     banned: false,
                     isVerified: false
                 };
-                accountsRef.set(accounts);
                 localStorage.setItem('accounts', JSON.stringify(accounts));
                 currentUser = username;
                 localStorage.setItem('currentUser', currentUser);
@@ -326,10 +374,11 @@
                 viewedBy: []
             };
             posts.unshift(post);
-            postsRef.set(posts);
+            localStorage.setItem('posts', JSON.stringify(posts));
+            broadcastPost(post); // Share with peers
             postInput.value = '';
             charCount.textContent = '0/280';
-            // Feed will auto-update via Firebase listener
+            renderFeed();
         });
 
         function getTrendingTopics() {
@@ -370,7 +419,8 @@
                     if (!item.viewedBy.includes(currentUser)) {
                         item.views += 1;
                         item.viewedBy.push(currentUser);
-                        postsRef.set(posts);
+                        localStorage.setItem('posts', JSON.stringify(posts));
+                        broadcastUpdate(item);
                     }
                     const account = accounts[normalizeUsername(item.username)] || { pfp: defaultPfp };
                     const isLiked = item.likes.includes(currentUser);
@@ -392,13 +442,14 @@
                     if (!post.viewedBy.includes(currentUser)) {
                         post.views += 1;
                         post.viewedBy.push(currentUser);
+                        localStorage.setItem('posts', JSON.stringify(posts));
+                        broadcastUpdate(post);
                     }
                     const account = accounts[normalizeUsername(post.username)] || { pfp: defaultPfp };
                     const isLiked = post.likes.includes(currentUser);
                     const canDelete = normalizeUsername(post.username) === normalizeUsername(currentUser) || isModerator();
                     feed.innerHTML += renderPost(post, account, isLiked, canDelete, false);
                 });
-                postsRef.set(posts);
                 if (relevantPosts.length === 0) feed.innerHTML = '<p>No posts yet.</p>';
             }
             renderTrending();
@@ -454,7 +505,8 @@
                 if (!reply.viewedBy.includes(currentUser)) {
                     reply.views += 1;
                     reply.viewedBy.push(currentUser);
-                    postsRef.set(posts);
+                    localStorage.setItem('posts', JSON.stringify(posts));
+                    broadcastUpdate(reply);
                 }
                 const replyAccount = accounts[normalizeUsername(reply.username)] || { pfp: defaultPfp };
                 const canDelete = normalizeUsername(reply.username) === normalizeUsername(currentUser) || isModerator();
@@ -514,7 +566,8 @@
                 }
             };
             posts.forEach(post => removeReplies(post.replies || []));
-            postsRef.set(posts);
+            localStorage.setItem('posts', JSON.stringify(posts));
+            broadcastUpdate({ id: Date.now(), action: 'remove', username });
         }
 
         function updateProfileView(username) {
@@ -824,7 +877,9 @@
                     const index = post.likes.indexOf(currentUser);
                     if (index === -1) post.likes.push(currentUser);
                     else post.likes.splice(index, 1);
-                    postsRef.set(posts);
+                    localStorage.setItem('posts', JSON.stringify(posts));
+                    broadcastUpdate(post);
+                    renderFeed();
                 }
             } else if (target.classList.contains('retweet-btn')) {
                 const postId = parseInt(target.dataset.id);
@@ -854,8 +909,10 @@
                         isRepost: true,
                         reposter: currentUser
                     });
-                    postsRef.set(posts);
-                    accountsRef.set(accounts);
+                    localStorage.setItem('posts', JSON.stringify(posts));
+                    localStorage.setItem('accounts', JSON.stringify(accounts));
+                    broadcastPost(posts[0]);
+                    renderFeed();
                 }
             } else if (target.classList.contains('delete-btn')) {
                 const postId = parseInt(target.dataset.id);
@@ -867,6 +924,9 @@
                         for (let i = 0; i < replies.length; i++) {
                             if (replies[i].id === replyId && (normalizeUsername(replies[i].username) === normalizeUsername(currentUser) || isModerator())) {
                                 replies.splice(i, 1);
+                                localStorage.setItem('posts', JSON.stringify(posts));
+                                broadcastUpdate(post);
+                                renderFeed();
                                 return true;
                             }
                             if (replies[i].replies && deleteReply(replies[i].replies)) return true;
@@ -874,18 +934,19 @@
                         return false;
                     };
                     deleteReply(post.replies);
-                    postsRef.set(posts);
                 } else if (normalizeUsername(post.username) === normalizeUsername(currentUser) || isModerator() || (post.isRepost && normalizeUsername(post.reposter) === normalizeUsername(currentUser))) {
                     if (accounts[normalizeUsername(post.username)]?.pinnedPost === post.id) {
                         accounts[normalizeUsername(post.username)].pinnedPost = null;
-                        accountsRef.set(accounts);
+                        localStorage.setItem('accounts', JSON.stringify(accounts));
                     }
                     posts.splice(posts.indexOf(post), 1);
                     if (post.isRepost) {
                         accounts[normalizeUsername(post.reposter)].reposts = accounts[normalizeUsername(post.reposter)].reposts.filter(r => r.id !== post.id);
-                        accountsRef.set(accounts);
+                        localStorage.setItem('accounts', JSON.stringify(accounts));
                     }
-                    postsRef.set(posts);
+                    localStorage.setItem('posts', JSON.stringify(posts));
+                    broadcastUpdate({ id: post.id, action: 'delete' });
+                    renderFeed();
                 }
             } else if (target.classList.contains('reply-btn')) {
                 const postId = parseInt(target.dataset.id);
@@ -900,7 +961,9 @@
                     if (newContent && newContent.trim() && newContent !== post.content) {
                         post.content = newContent.trim();
                         post.time = new Date().toLocaleString();
-                        postsRef.set(posts);
+                        localStorage.setItem('posts', JSON.stringify(posts));
+                        broadcastUpdate(post);
+                        renderFeed();
                     }
                 }
             } else if (target.classList.contains('pin-btn')) {
@@ -913,7 +976,7 @@
                     } else {
                         accounts[normalizedUser].pinnedPost = postId;
                     }
-                    accountsRef.set(accounts);
+                    localStorage.setItem('accounts', JSON.stringify(accounts));
                     updateProfileView(currentUser);
                 }
             } else if (target.classList.contains('ban-btn')) {
@@ -951,23 +1014,24 @@
                         }
                         accounts[normalizedUsername].banned = false;
                     }
-                    accountsRef.set(accounts);
-                    postsRef.set(posts);
-                    bannedPostsRef.set(bannedPosts);
+                    localStorage.setItem('accounts', JSON.stringify(accounts));
+                    localStorage.setItem('bannedPosts', JSON.stringify(bannedPosts));
+                    localStorage.setItem('posts', JSON.stringify(posts));
+                    broadcastUpdate({ id: Date.now(), action: 'ban', username: normalizedUsername });
                     renderModerationPanel();
                 }
             } else if (target.classList.contains('verify-btn')) {
                 const username = target.dataset.username;
                 if (isModerator() && username !== 'ghastical') {
                     accounts[normalizeUsername(username)].isVerified = !accounts[normalizeUsername(username)].isVerified;
-                    accountsRef.set(accounts);
+                    localStorage.setItem('accounts', JSON.stringify(accounts));
                     renderModerationPanel();
                 }
             } else if (target.classList.contains('mod-btn')) {
                 const username = target.dataset.username;
                 if (currentUser === 'ghastical' && username !== 'ghastical') {
                     accounts[normalizeUsername(username)].canModerate = !accounts[normalizeUsername(username)].canModerate;
-                    accountsRef.set(accounts);
+                    localStorage.setItem('accounts', JSON.stringify(accounts));
                     renderModerationPanel();
                 }
             }
@@ -996,9 +1060,11 @@
             };
             targetItem.replies = targetItem.replies || [];
             targetItem.replies.push(reply);
-            postsRef.set(posts);
+            localStorage.setItem('posts', JSON.stringify(posts));
+            broadcastUpdate(targetItem);
             replyInput.value = '';
             e.target.style.display = 'none';
+            renderFeed();
         });
 
         followBtn.addEventListener('click', () => {
@@ -1021,7 +1087,7 @@
                 followBtn.textContent = 'Follow';
                 followBtn.classList.remove('following');
             }
-            accountsRef.set(accounts);
+            localStorage.setItem('accounts', JSON.stringify(accounts));
             updateProfileView(targetUser);
         });
 
@@ -1085,7 +1151,6 @@
                 const reader = new FileReader();
                 reader.onload = () => {
                     accounts[currentUser].pfp = reader.result;
-                    accountsRef.set(accounts);
                     localStorage.setItem('accounts', JSON.stringify(accounts));
                     profileCustomize.style.display = 'none';
                     app.style.display = 'flex';
@@ -1118,10 +1183,10 @@
             });
             if (bannedPosts[currentUser]) delete bannedPosts[currentUser];
             delete accounts[currentUser];
-            accountsRef.set(accounts);
-            bannedPostsRef.set(bannedPosts);
             localStorage.setItem('accounts', JSON.stringify(accounts));
             localStorage.setItem('bannedPosts', JSON.stringify(bannedPosts));
+            localStorage.setItem('posts', JSON.stringify(posts));
+            broadcastUpdate({ id: Date.now(), action: 'deleteAccount', username: currentUser });
 
             currentUser = null;
             localStorage.removeItem('currentUser');
